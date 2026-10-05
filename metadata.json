@@ -1,0 +1,6 @@
+{
+  "name": "Athenaeum Digital Library",
+  "description": "A modern, responsive digital library system with dynamic database-backed catalog search, copy availability tracking, reservations, borrowing management, and librarian controls.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
