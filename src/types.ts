@@ -180,6 +180,7 @@ export interface LibraryStats {
 export interface BookFilterParams {
   search?: string;
   category?: string;
+  collection?: string;
   author?: string;
   availability?: string;
   language?: string;

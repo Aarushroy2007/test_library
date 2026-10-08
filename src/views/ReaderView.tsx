@@ -133,7 +133,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         const recent = await api.getRecentReading(currentUser.id);
         setRecentReading(recent);
       }
-      const booksRes = await api.getBooks({ limit: 12 });
+      const booksRes = await api.getBooks({ limit: 50 });
       setAllBooksList(booksRes.books || []);
     } catch (e) {
       console.error('Failed to load reading shelf:', e);

@@ -72,6 +72,7 @@ apiRouter.get('/books', (req: Request, res: Response) => {
     const {
       search,
       category,
+      collection,
       author,
       availability,
       language,
@@ -119,6 +120,13 @@ apiRouter.get('/books', (req: Request, res: Response) => {
     if (category && category !== 'all') {
       conditions.push(`(c.slug = ? OR c.id = ?)`);
       params.push(category, category);
+    }
+
+    // Collection filter (Accession / CU Records vs Core Curated)
+    if (collection === 'accession' || collection === 'cu') {
+      conditions.push(`b.id LIKE 'bk_cu_%'`);
+    } else if (collection === 'core' || collection === 'curated') {
+      conditions.push(`b.id NOT LIKE 'bk_cu_%'`);
     }
 
     // Author filter

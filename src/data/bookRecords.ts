@@ -1,6 +1,14 @@
-import { importEntries, type CUBookEntry } from './import_cu_data.ts';
+export interface CUBookRecord {
+  accNo: string;
+  accDate: string;
+  title: string;
+  author: string;
+  publisher: string;
+}
 
-export const cuRecords: CUBookEntry[] = [
+export type CUBookEntry = CUBookRecord;
+
+export const cuRecords: CUBookRecord[] = [
   // F.Y. 2025 to 2026 - Page 1
   { accNo: 'T50771', accDate: '25/11/2025', title: 'Nanoparticulate materials synthesis', author: 'Wiley', publisher: 'Wiley' },
   { accNo: 'T50960', accDate: '19/02/2026', title: 'Neuroscience', author: 'Purves', publisher: 'Oxford University Press' },
@@ -558,6 +566,125 @@ export const cuRecords: CUBookEntry[] = [
   { accNo: 'T50619', accDate: '19/12/2024', title: 'A textbook of fluid mechanics and hydraulic mechanics', author: 'Bansal R. K.', publisher: 'Laxmi Publications' },
 ];
 
-if (process.argv[1]?.includes('run_import')) {
-  importEntries(cuRecords);
+// Clean and capitalize book titles
+export function cleanBookTitle(raw: string): string {
+  return raw
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^([a-z])/, (_, c) => c.toUpperCase());
 }
+
+// Categorize book by title keywords
+export function detectBookCategory(title: string): {
+  id: string;
+  name: string;
+  slug: string;
+  color: string;
+  icon: string;
+} {
+  const t = title.toLowerCase();
+  if (
+    t.includes('quantum') ||
+    t.includes('physics') ||
+    t.includes('optics') ||
+    t.includes('laser') ||
+    t.includes('photon') ||
+    t.includes('electromagnet') ||
+    t.includes('astronomy') ||
+    t.includes('gravity') ||
+    t.includes('fluid mechanics')
+  ) {
+    return {
+      id: 'cat_science',
+      name: 'Science & Physics',
+      slug: 'science',
+      color: '#14532D',
+      icon: 'Atom',
+    };
+  }
+  if (
+    t.includes('machine learning') ||
+    t.includes('deep learning') ||
+    t.includes('artificial intelligence') ||
+    t.includes('python') ||
+    t.includes('data science') ||
+    t.includes('data structure') ||
+    t.includes('algorithm') ||
+    t.includes('nlp') ||
+    t.includes('natural language') ||
+    t.includes('iot') ||
+    t.includes('internet of things') ||
+    t.includes('cyber') ||
+    t.includes('robot') ||
+    t.includes('computer') ||
+    t.includes('network') ||
+    t.includes('cloud') ||
+    t.includes('software')
+  ) {
+    return {
+      id: 'cat_compsci',
+      name: 'Computer Science & AI',
+      slug: 'computer-science',
+      color: '#1E3A8A',
+      icon: 'Cpu',
+    };
+  }
+  if (
+    t.includes('math') ||
+    t.includes('linear algebra') ||
+    t.includes('statistical') ||
+    t.includes('probability') ||
+    t.includes('graph theory') ||
+    t.includes('algebra') ||
+    t.includes('combinator')
+  ) {
+    return {
+      id: 'cat_math',
+      name: 'Mathematics',
+      slug: 'mathematics',
+      color: '#0F766E',
+      icon: 'Sigma',
+    };
+  }
+  if (
+    t.includes('physiology') ||
+    t.includes('anatomy') ||
+    t.includes('biochemistry') ||
+    t.includes('neuroscience') ||
+    t.includes('medical') ||
+    t.includes('cancer') ||
+    t.includes('brain') ||
+    t.includes('biomedical') ||
+    t.includes('pain medicine') ||
+    t.includes('mri')
+  ) {
+    return {
+      id: 'cat_biomedical',
+      name: 'Biomedical & Health Sciences',
+      slug: 'biomedical',
+      color: '#0F766E',
+      icon: 'Atom',
+    };
+  }
+  if (
+    t.includes('sport') ||
+    t.includes('exercise') ||
+    t.includes('football')
+  ) {
+    return {
+      id: 'cat_sports',
+      name: 'Sports & Exercise Sciences',
+      slug: 'sports-science',
+      color: '#B45309',
+      icon: 'Activity',
+    };
+  }
+  return {
+    id: 'cat_engineering',
+    name: 'Technology & Engineering',
+    slug: 'engineering',
+    color: '#1E3A8A',
+    icon: 'Cpu',
+  };
+}
+

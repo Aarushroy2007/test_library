@@ -1,7 +1,19 @@
-import React, { useState } from 'react';
-import { X, Upload, FileText, CheckCircle2, AlertCircle, Database, Sparkles, RefreshCw } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import {
+  X,
+  Upload,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
+  Database,
+  Sparkles,
+  RefreshCw,
+  FolderOpen,
+  BookOpen,
+} from 'lucide-react';
 import { api } from '../services/api.ts';
 import { useAuth } from '../context/AuthContext.tsx';
+import { cuRecords, detectBookCategory, cleanBookTitle } from '../data/bookRecords.ts';
 
 interface BatchImportModalProps {
   isOpen: boolean;
@@ -15,74 +27,61 @@ export const BatchImportModal: React.FC<BatchImportModalProps> = ({ isOpen, onCl
   const [rawText, setRawText] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
-  const sampleJSON = JSON.stringify(
-    [
-      {
-        title: 'Quantum Computing for Computer Scientists',
-        author: 'Noson S. Yanofsky',
-        publisher: 'Cambridge University Press',
-        year: 2024,
-        category: 'cat_compsci',
-        copies: 2,
-        accNo: 'QC-701',
-        shelfNumber: 'CS-QC-01',
-        section: 'Computing & AI Hall',
-        floor: 2,
-        isbn: '978-0521879965',
-        description: 'Comprehensive introduction to quantum computing algorithms, circuits, and quantum complexity theory.',
-      },
-      {
-        title: 'Biomechanical Foundations of Athletic Movement',
-        author: 'Robert M. Malina',
-        publisher: 'Human Kinetics',
+  // Load the institutional 518 book records file
+  const handleLoadCUFile = () => {
+    const formatted = cuRecords.map((r) => {
+      const cat = detectBookCategory(r.title);
+      return {
+        title: cleanBookTitle(r.title),
+        author: r.author?.trim() || 'Scholarly Faculty',
+        publisher: r.publisher?.trim() || 'Academic Press',
+        accNo: r.accNo.trim(),
+        accDate: r.accDate,
+        category: cat.id,
         year: 2025,
-        category: 'cat_sports',
-        copies: 3,
-        accNo: 'SP-902',
-        shelfNumber: 'SP-KIN-03',
-        section: 'Exercise & Kinesiology Wing',
-        floor: 1,
-        isbn: '978-1492598765',
-        description: 'Foundations of kinematic analysis, force distribution, and physiological athletic adaptation.',
-      },
-      {
-        title: 'Modern Semiconductor Device Physics',
-        author: 'Simon M. Sze',
-        publisher: 'Wiley-Interscience',
-        year: 2025,
-        category: 'cat_engineering',
-        copies: 2,
-        accNo: 'EE-410',
-        shelfNumber: 'EN-PHY-04',
-        section: 'Engineering & Technology Stacks',
-        floor: 1,
-        isbn: '978-0471152378',
-        description: 'In-depth coverage of submicron devices, bandgap engineering, and heterostructure field effect transistors.',
-      },
-    ],
-    null,
-    2
-  );
+        copies: 1,
+      };
+    });
 
-  const sampleTSV = `Title\tAuthor\tPublisher\tAccNo\tCategory
-Deep Learning Architectures\tIan Goodfellow\tMIT Press\tDL-101\tcat_compsci
-Fluid Mechanics & Heat Transfer\tFrank M. White\tMcGraw Hill\tFM-304\tcat_engineering
-Neurobiology of Cognition\tEric R. Kandel\tOxford Press\tNB-508\tcat_biomedical`;
-
-  const handleLoadSample = () => {
-    if (mode === 'json') {
-      setRawText(sampleJSON);
-    } else {
-      setRawText(sampleTSV);
-    }
+    setMode('json');
+    setRawText(JSON.stringify(formatted, null, 2));
+    setFileName('Institutional_CU_Accessions_Catalog (518 Books).json');
     setErrorMsg(null);
+    showToast(`Loaded ${formatted.length} books from the institutional catalog file.`, 'info');
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (!content) return;
+
+      if (file.name.endsWith('.json') || content.trim().startsWith('[')) {
+        setMode('json');
+      } else {
+        setMode('tsv');
+      }
+      setRawText(content);
+      setErrorMsg(null);
+      showToast(`Loaded ${file.name} successfully.`, 'info');
+    };
+    reader.onerror = () => {
+      setErrorMsg('Failed to read file from disk.');
+    };
+    reader.readAsText(file);
   };
 
   const parseInput = (): any[] => {
-    if (!rawText.trim()) throw new Error('Please enter book records to import.');
+    if (!rawText.trim()) throw new Error('Please enter or load book records to import.');
 
     if (mode === 'json') {
       const parsed = JSON.parse(rawText);
@@ -128,7 +127,7 @@ Neurobiology of Cognition\tEric R. Kandel\tOxford Press\tNB-508\tcat_biomedical`
     try {
       const items = parseInput();
       const res = await api.batchImportBooks(items);
-      showToast(res.message, 'success');
+      showToast(res.message || `Successfully ingested ${items.length} titles.`, 'success');
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -138,21 +137,37 @@ Neurobiology of Cognition\tEric R. Kandel\tOxford Press\tNB-508\tcat_biomedical`
     }
   };
 
+  // Quick preview count
+  let detectedCount = 0;
+  try {
+    if (rawText.trim()) {
+      if (mode === 'json' && rawText.trim().startsWith('[')) {
+        const arr = JSON.parse(rawText);
+        if (Array.isArray(arr)) detectedCount = arr.length;
+      } else {
+        const lines = rawText.trim().split('\n');
+        if (lines.length > 1) detectedCount = lines.length - 1;
+      }
+    }
+  } catch {
+    // typing in progress
+  }
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full border border-stone-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-2xl max-w-3xl w-full border border-stone-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="px-6 py-4 bg-[#FBF9F5] border-b border-stone-200/90 flex items-center justify-between">
+        <div className="px-6 py-4 bg-[#FBF9F5] border-b border-stone-200/90 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-[#8B3A2B] text-amber-100 flex items-center justify-center shadow-xs">
               <Database className="w-4 h-4" />
             </div>
             <div>
               <h2 className="font-serif text-lg font-bold text-stone-900">
-                Batch Ingest / Update Database
+                Batch Ingest / Connect Book Catalog File
               </h2>
               <p className="text-xs text-stone-600">
-                Import or update catalog records, physical copies, and authors directly into SQLite
+                Upload or connect book accession records directly to the Athenaeum library database
               </p>
             </div>
           </div>
@@ -165,8 +180,50 @@ Neurobiology of Cognition\tEric R. Kandel\tOxford Press\tNB-508\tcat_biomedical`
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-4">
-          {/* Format Selection Bar */}
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+          {/* Quick Connect Presets Bar */}
+          <div className="p-3.5 bg-amber-50/70 border border-amber-200/80 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-2.5">
+              <BookOpen className="w-4 h-4 text-[#8B3A2B] shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-xs font-bold text-amber-950">
+                  Institutional Accession File Available
+                </h4>
+                <p className="text-[11px] text-amber-800/90">
+                  518 university accession titles with physical barcodes, departments, and shelf coordinates.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                accept=".json,.csv,.tsv,.txt"
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-stone-700 bg-white hover:bg-stone-50 border border-stone-300 shadow-2xs flex items-center gap-1.5 transition-colors"
+              >
+                <FolderOpen className="w-3.5 h-3.5 text-stone-500" />
+                <span>Upload File</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleLoadCUFile}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-[#8B3A2B] hover:bg-[#732F23] shadow-xs flex items-center gap-1.5 transition-colors"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                <span>Connect 518 Books File</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Format Selection & Stats Bar */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-lg border border-stone-200/80">
               <button
@@ -189,15 +246,20 @@ Neurobiology of Cognition\tEric R. Kandel\tOxford Press\tNB-508\tcat_biomedical`
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={handleLoadSample}
-              className="text-xs text-[#8B3A2B] hover:text-[#732F23] font-medium flex items-center gap-1.5 transition-colors"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Load Sample Template</span>
-            </button>
+            {detectedCount > 0 && (
+              <span className="text-xs font-mono font-medium px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>{detectedCount} books ready to ingest</span>
+              </span>
+            )}
           </div>
+
+          {fileName && (
+            <div className="text-xs text-stone-600 flex items-center gap-1.5 bg-stone-50 px-3 py-1.5 rounded-lg border border-stone-200">
+              <FileText className="w-3.5 h-3.5 text-[#8B3A2B]" />
+              <span>Current file: <strong>{fileName}</strong></span>
+            </div>
+          )}
 
           {/* Text Area */}
           <div>
@@ -207,7 +269,7 @@ Neurobiology of Cognition\tEric R. Kandel\tOxford Press\tNB-508\tcat_biomedical`
                 setRawText(e.target.value);
                 if (errorMsg) setErrorMsg(null);
               }}
-              rows={12}
+              rows={11}
               placeholder={
                 mode === 'json'
                   ? '[\n  {\n    "title": "Book Title",\n    "author": "Author Name",\n    "publisher": "Publisher",\n    "accNo": "T50999",\n    "category": "cat_compsci",\n    "copies": 2\n  }\n]'
@@ -224,17 +286,17 @@ Neurobiology of Cognition\tEric R. Kandel\tOxford Press\tNB-508\tcat_biomedical`
             </div>
           )}
 
-          <div className="p-3 bg-amber-50/60 border border-amber-200/80 rounded-lg text-xs text-amber-900 flex items-start gap-2">
-            <CheckCircle2 className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+          <div className="p-3 bg-stone-50 border border-stone-200 rounded-lg text-xs text-stone-600 flex items-start gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
             <p>
-              Records will be inserted or updated in SQLite immediately with foreign keys linked to authors,
-              categories, and generated accession copies on the library physical shelves.
+              Records will be synchronized with SQLite immediately. Physical accession copies, barcode identifiers,
+              and categories will be linked to the live catalog and digital reading room.
             </p>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3.5 bg-[#FBF9F5] border-t border-stone-200/90 flex items-center justify-end gap-2.5">
+        <div className="px-6 py-3.5 bg-[#FBF9F5] border-t border-stone-200/90 flex items-center justify-end gap-2.5 shrink-0">
           <button
             type="button"
             onClick={onClose}
@@ -251,12 +313,12 @@ Neurobiology of Cognition\tEric R. Kandel\tOxford Press\tNB-508\tcat_biomedical`
             {loading ? (
               <>
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                <span>Updating Database...</span>
+                <span>Ingesting to Database...</span>
               </>
             ) : (
               <>
                 <Upload className="w-3.5 h-3.5" />
-                <span>Update Database</span>
+                <span>Ingest {detectedCount > 0 ? `${detectedCount} Books` : 'to Database'}</span>
               </>
             )}
           </button>

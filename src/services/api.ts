@@ -46,6 +46,7 @@ export const api = {
     const query = new URLSearchParams();
     if (params.search) query.set('search', params.search);
     if (params.category && params.category !== 'all') query.set('category', params.category);
+    if (params.collection && params.collection !== 'all') query.set('collection', params.collection);
     if (params.author && params.author !== 'all') query.set('author', params.author);
     if (params.availability && params.availability !== 'all') query.set('availability', params.availability);
     if (params.language && params.language !== 'all') query.set('language', params.language);

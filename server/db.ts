@@ -1,8 +1,8 @@
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import fs from 'node:fs';
-import { importEntries, CUBookEntry } from '../scripts/import_cu_data.ts';
-import { cuRecords } from '../scripts/run_import.ts';
+import { importEntries } from '../scripts/import_cu_data.ts';
+import { cuRecords } from '../src/data/bookRecords.ts';
 
 const isVercel = Boolean(process.env.VERCEL);
 const dataDir = isVercel
@@ -215,14 +215,14 @@ export function initDatabase() {
   const cuCountRow = db.prepare("SELECT COUNT(*) as count FROM books WHERE id LIKE 'bk_cu_%'").get() as { count: number };
   if (cuCountRow.count === 0) {
     console.log('Ingesting university accession catalog records into SQLite database...');
-    importEntries(cuRecords);
+    importEntries(cuRecords, db);
   }
 }
 
 export function syncDatabaseCatalog() {
   const cuCountRow = db.prepare("SELECT COUNT(*) as count FROM books WHERE id LIKE 'bk_cu_%'").get() as { count: number };
   if (cuCountRow.count === 0) {
-    importEntries(cuRecords);
+    importEntries(cuRecords, db);
   }
   const totalBooks = (db.prepare('SELECT COUNT(*) as c FROM books').get() as any).c;
   const totalCopies = (db.prepare('SELECT COUNT(*) as c FROM book_copies').get() as any).c;

@@ -1,11 +1,19 @@
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 
-const dataDir = path.resolve(process.cwd(), 'data');
-const dbPath = path.join(dataDir, 'library.db');
-const db = new DatabaseSync(dbPath);
-
-db.exec('PRAGMA foreign_keys = ON;');
+let fallbackDb: DatabaseSync | null = null;
+function getDb(targetDb?: DatabaseSync): DatabaseSync {
+  if (targetDb) return targetDb;
+  if (!fallbackDb) {
+    const dataDir = path.resolve(process.cwd(), 'data');
+    const dbPath = path.join(dataDir, 'library.db');
+    fallbackDb = new DatabaseSync(dbPath);
+    try {
+      fallbackDb.exec('PRAGMA foreign_keys = ON;');
+    } catch {}
+  }
+  return fallbackDb;
+}
 
 // Helper to sanitize title
 function cleanTitle(raw: string): string {
@@ -39,15 +47,6 @@ function detectCategory(title: string): string {
   return 'cat_engineering';
 }
 
-// Ensure engineering and biomedical categories exist
-const ensureCategory = db.prepare(`
-  INSERT OR IGNORE INTO categories (id, name, slug, description, icon, accent_color)
-  VALUES (?, ?, ?, ?, ?, ?)
-`);
-ensureCategory.run('cat_engineering', 'Technology & Engineering', 'engineering', 'Chemical, electrical, materials, power systems, and textile engineering.', 'Cpu', '#1E3A8A');
-ensureCategory.run('cat_biomedical', 'Biomedical & Health Sciences', 'biomedical', 'Physiology, anatomy, biochemistry, neuroscience, and medical diagnostics.', 'Atom', '#0F766E');
-ensureCategory.run('cat_sports', 'Sports & Exercise Sciences', 'sports-science', 'Sports analytics, physiology of exercise, training expertise, and coaching methodology.', 'Activity', '#B45309');
-
 export interface CUBookEntry {
   accNo: string;
   accDate: string;
@@ -56,8 +55,18 @@ export interface CUBookEntry {
   publisher: string;
 }
 
-export function importEntries(entries: CUBookEntry[]) {
+export function importEntries(entries: CUBookEntry[], activeDb?: DatabaseSync) {
+  const db = getDb(activeDb);
   console.log(`Processing ${entries.length} accessions records...`);
+
+  // Ensure categories exist
+  const ensureCategory = db.prepare(`
+    INSERT OR IGNORE INTO categories (id, name, slug, description, icon, accent_color)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+  ensureCategory.run('cat_engineering', 'Technology & Engineering', 'engineering', 'Chemical, electrical, materials, power systems, and textile engineering.', 'Cpu', '#1E3A8A');
+  ensureCategory.run('cat_biomedical', 'Biomedical & Health Sciences', 'biomedical', 'Physiology, anatomy, biochemistry, neuroscience, and medical diagnostics.', 'Atom', '#0F766E');
+  ensureCategory.run('cat_sports', 'Sports & Exercise Sciences', 'sports-science', 'Sports analytics, physiology of exercise, training expertise, and coaching methodology.', 'Activity', '#B45309');
 
   const insertAuthor = db.prepare(`
     INSERT OR IGNORE INTO authors (id, name, biography)

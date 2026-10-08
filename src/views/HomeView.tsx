@@ -116,15 +116,21 @@ export const HomeView: React.FC<HomeViewProps> = ({ onSelectBook, onNavigate, on
           {/* Popular Search Suggestions */}
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs text-stone-500">
             <span className="font-medium text-stone-400">Popular searches:</span>
-            {['Knuth', 'Feynman', 'Cosmos', 'Stoicism', 'Ada Lovelace'].map((item) => (
+            {['Nanomaterials', 'Neuroscience', 'Quantum Algorithms', 'Deep Learning', 'Fluid Mechanics', 'Feynman', 'Cosmos'].map((item) => (
               <button
                 key={item}
                 onClick={() => onNavigate('catalog', { search: item })}
-                className="hover:text-[#8B3A2B] hover:underline transition-colors text-stone-600"
+                className="hover:text-[#8B3A2B] hover:underline transition-colors text-stone-600 bg-stone-100/70 hover:bg-amber-100/60 px-2 py-0.5 rounded-md"
               >
                 {item}
               </button>
             ))}
+            <button
+              onClick={() => onNavigate('catalog', { collection: 'accession' })}
+              className="text-[#8B3A2B] font-semibold hover:underline bg-amber-100/80 px-2.5 py-0.5 rounded-md"
+            >
+              🏛️ CU Accession Records (518 Copies) →
+            </button>
           </div>
         </div>
       </section>

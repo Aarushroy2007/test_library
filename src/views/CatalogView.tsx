@@ -35,6 +35,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
   // Filter state
   const [selectedCategory, setSelectedCategory] = useState<string>(initialParams?.category || 'all');
+  const [selectedCollection, setSelectedCollection] = useState<string>(initialParams?.collection || 'all');
   const [selectedAuthor, setSelectedAuthor] = useState<string>(initialParams?.author || 'all');
   const [selectedAvailability, setSelectedAvailability] = useState<string>(
     initialParams?.availability || 'all'
@@ -86,6 +87,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   }, [
     activeSearch,
     selectedCategory,
+    selectedCollection,
     selectedAuthor,
     selectedAvailability,
     selectedLanguage,
@@ -103,6 +105,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         {
           search: activeSearch,
           category: selectedCategory,
+          collection: selectedCollection,
           author: selectedAuthor,
           availability: selectedAvailability,
           language: selectedLanguage,
@@ -128,6 +131,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
     setSearchInput('');
     setActiveSearch('');
     setSelectedCategory('all');
+    setSelectedCollection('all');
     setSelectedAuthor('all');
     setSelectedAvailability('all');
     setSelectedLanguage('all');
@@ -140,6 +144,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   const hasActiveFilters =
     activeSearch !== '' ||
     selectedCategory !== 'all' ||
+    selectedCollection !== 'all' ||
     selectedAuthor !== 'all' ||
     selectedAvailability !== 'all' ||
     selectedLanguage !== 'all' ||
@@ -254,6 +259,60 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             </select>
           </div>
         </div>
+      </div>
+
+      {/* Collection Switcher Tabs */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => {
+            setSelectedCollection('all');
+            setPage(1);
+          }}
+          className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-2 ${
+            selectedCollection === 'all'
+              ? 'bg-[#8B3A2B] text-white shadow-2xs'
+              : 'bg-white border border-stone-200 text-stone-700 hover:bg-stone-50'
+          }`}
+        >
+          <span>All Volumes</span>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+            selectedCollection === 'all' ? 'bg-white/20 text-white' : 'bg-stone-100 text-stone-600'
+          }`}>358</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setSelectedCollection('accession');
+            setPage(1);
+          }}
+          className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-2 ${
+            selectedCollection === 'accession'
+              ? 'bg-[#8B3A2B] text-white shadow-2xs'
+              : 'bg-white border border-stone-200 text-stone-700 hover:bg-stone-50'
+          }`}
+        >
+          <span>Institutional Accessions Catalog (CU Records)</span>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+            selectedCollection === 'accession' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-900 font-bold'
+          }`}>518 Copies</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setSelectedCollection('core');
+            setPage(1);
+          }}
+          className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-2 ${
+            selectedCollection === 'core'
+              ? 'bg-[#8B3A2B] text-white shadow-2xs'
+              : 'bg-white border border-stone-200 text-stone-700 hover:bg-stone-50'
+          }`}
+        >
+          <span>Core Curated Classics</span>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+            selectedCollection === 'core' ? 'bg-white/20 text-white' : 'bg-stone-100 text-stone-600'
+          }`}>22</span>
+        </button>
       </div>
 
       {/* Advanced Filter Panel (Collapsible) */}

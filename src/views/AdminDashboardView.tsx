@@ -79,7 +79,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onSelect
       const [statsData, overviewData, booksData, usersData] = await Promise.all([
         api.getStats(),
         api.getAdminOverview(),
-        api.getBooks({ limit: 50 }),
+        api.getBooks({ limit: 100 }),
         api.getUsers(),
       ]);
       setStats(statsData);

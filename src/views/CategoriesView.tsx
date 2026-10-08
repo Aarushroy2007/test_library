@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Cpu, Atom, Compass, Landmark, Sigma, UserCheck, Brain, ArrowRight, BookMarked } from 'lucide-react';
+import { BookOpen, Cpu, Atom, Compass, Landmark, Sigma, UserCheck, Brain, ArrowRight, BookMarked, Activity } from 'lucide-react';
 import { Category } from '../types.ts';
 import { api } from '../services/api.ts';
 
@@ -16,6 +16,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Sigma,
   UserCheck,
   Brain,
+  Activity,
 };
 
 export const CategoriesView: React.FC<CategoriesViewProps> = ({ onSelectCategory }) => {
